@@ -6,7 +6,7 @@ def readme():
         return f.read()
 
 
-setup(name='anntater',
+setup(name='annotater',
       version='0.1',
       description='The python program to annotate a VCF',
       long_description=readme(),
