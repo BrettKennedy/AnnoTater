@@ -22,7 +22,7 @@ setup(name='annotater',
           'pyvcf'
       ],
       package_data={'annotater': [
-          'data/*.vcf']},
+          'data/*.vcf', 'data/*.csv']},
       entry_points={
           'console_scripts': ['annotater=annotater.__main__:main'],
       },
