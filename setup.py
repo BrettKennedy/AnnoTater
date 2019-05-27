@@ -19,7 +19,7 @@ setup(name='annotater',
       author_email='brett.jacob.kennedy@gmail.com',
       packages=find_packages(),
       install_requires=[
-          'pyvcf'
+          'pysam'
       ],
       package_data={'annotater': [
           'data/*.vcf', 'data/*.csv']},

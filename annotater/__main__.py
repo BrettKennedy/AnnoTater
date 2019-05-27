@@ -18,10 +18,17 @@ import requests
 from pysam import VariantFile
 
 __version__ = pkg_resources.require("annotater")[0].version
+DATA_PATH = pkg_resources.resource_filename('annotater', 'data/')
 
-
-def get_consqeunce_array():
-    
+def get_consqeunce_array(so_consq=DATA_PATH + "so_consequences.csv"):
+    """creates an array of sequence ontology consequences"""
+    so_array = []
+    # read through file and pull in consequence terms
+    with open(so_consq) as sc:
+        for line in csv.reader(sc, delimiter=","):
+            so_array.append(line[1])
+    print(so_array)
+    return so_array
 
 
 def get_args():
@@ -40,21 +47,25 @@ def get_args():
 
 def write_output_csv():
     """Outputs the annotations to a CSV file"""
+    return 0
 
 def write_output_json():
     """Outputs the annotations to a JSON file"""
+    return 0
 
 
 def exac_freq(varinfo):
     """Pull in the exac allele frequency via API"""
-    varinfo =
     resp = requests.get('http://exac.hms.harvard.edu/rest/variant/variant/' +
         varinfo)
-    if resp.status_code != 200:
+    # if resp.status_code != 200:
+    return 0
 
 
 
-def exac_meta(varinfo)
+def exac_meta(varinfo):
+    """Pulls in additional ExAC data"""
+    return 0
 
 
 def pull_annotes(record):
@@ -63,6 +74,7 @@ def pull_annotes(record):
     into the table.  Also calls the ExAC API function to pull data.
     """
     # create record dict for variant
+    """
     vardict = {"chrom": ,
                "pos": ,
                "ref": ,
@@ -75,26 +87,22 @@ def pull_annotes(record):
                "ExAC_AF": exac_freq(),
                "ExAC_Meta": exac_meta()
                }
-
-
-
-
+    """
+    return 0
 
 def main():
     # Retrive the arguments
     args = get_args()
-    # Initialize the table
     # output is formated:
     # [chrom, pos, vartype, depth, altreads, altfrac, exac_fq, exac_info]
-    variant_table = []
+    print(get_consqeunce_array())
+    """
     vcf_in = VariantFile(input_vcf)
     for record in vcf_in:
         variant_table.append(record)
-    if output_json == True:
-        output
+    """
+    return 0
 
 
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
