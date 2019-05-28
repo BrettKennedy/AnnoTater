@@ -34,3 +34,8 @@ annotater --vcf Challenge_Data/Challenge_data\ \(1\).vcf.gz --outfile Challenge_
 
 annotater --vcf Challenge_Data/Challenge_data\ \(1\).vcf.gz --outfile Challenge_Data/challenge.json --json
 ```
+
+## Challenge Data
+Outputs for challenge data can be found
+`Challenge_Data/challenge_out.json`
+`Challenge_data/challenge_out.tsv`

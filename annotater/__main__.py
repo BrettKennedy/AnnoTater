@@ -72,9 +72,12 @@ def get_high_severity(exacinfo):
         return ".", "."
     # clever little one-liner to grab all consequence terms from exacinfo
     varterms = [a["major_consequence"] for a in exacinfo["vep_annotations"]]
-    # find the highest ranked consequence by finding the smallest
-    # index of the terms in the variant array compared to the SO_ARRAY
-    severe_index = [SO_ARRAY.index(x) for x in varterms]
+    # find the highest ranked consequence by finding the smallest index
+    # value in the SO_ARRAY for each varaint term in the exac data
+    severe_index = [SO_ARRAY.index(x) for x in varterms if x in SO_ARRAY]
+    # if none of the exac terms are in the SO array, return missing values.
+    if severe_index == []:
+        return ".", "."
     # now find the index of the most severe term in the
     most_severe_idx = severe_index.index(min(severe_index))
     return varterms[most_severe_idx], exacinfo["transcripts"][most_severe_idx]
@@ -112,7 +115,7 @@ def annotate_variant(record):
     # in the case of a non-coding variant, or a variant absent from ExAC
     # use the type specificed in the VCF
     if vartype == ".":
-        vartype = record.info["TYPE"]
+        vartype = record.info["TYPE"][0]
     try:
         exac_af = exacinfo['allele_freq']
     except KeyError:
@@ -148,7 +151,7 @@ def main():
 
     with open(args.outfile, 'w') as of:
         if args.output_json:
-            of.write("{Variants:[")
+            of.write('{"Variants":[')
         else:
             header = ["chrom", "pos", "ref", "alt", "vartype", "transcript",
                         "depth", "altreads", "altpercent", "exac_af", "gene"]

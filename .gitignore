@@ -1,3 +1,4 @@
 annotater.egg-info/
 build/
 dist/
+annotater/__pycache__/
