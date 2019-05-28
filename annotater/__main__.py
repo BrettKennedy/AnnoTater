@@ -156,7 +156,6 @@ def main():
         for record in vcf_in:
             # annotates the desired values for that variant
             annotated_variant = annotate_variant(record)
-            print(annotated_variant)
             if args.output_json:
                 json.dump(annotated_variant, of)
                 of.write(",")
