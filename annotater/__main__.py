@@ -22,22 +22,24 @@ import sys
 
 from pysam import VariantFile
 
+
 __version__ = pkg_resources.require("annotater")[0].version
 DATA_PATH = pkg_resources.resource_filename('annotater', 'data/')
-# initialzing the consequence rank array as a GLOBAL so we neither have to
-# pass it around to all functions, nor initialize it for every variant.
-SO_ARRAY = get_consqeunce_array()
 
-def get_consqeunce_array(so_consq=DATA_PATH + "so_consequences.csv"):
-    """
-    Creates an array of sequence ontology consequences.
-    """
+
+def get_consqeunce_array(so_consq=DATA_PATH+"so_consequences.csv"):
+    """Creates an array of sequence ontology consequences."""
     so_array = []
     # read through file and pull in consequence terms
     with open(so_consq) as sc:
         for line in csv.reader(sc, delimiter=","):
             so_array.append(line[1])
     return so_array
+
+
+# initialzing the consequence rank array as a GLOBAL so we neither have to
+# pass it around to all functions, nor initialize it for every variant.
+SO_ARRAY = get_consqeunce_array()
 
 
 def get_args():
@@ -47,46 +49,43 @@ def get_args():
                     "version:" + __version__)
     args._optionals.title = "Options"
     args.add_argument("--vcf", dest="input_vcf", help="VCF file to parse")
-    args.add_argument("--output", dest="output_table", help="output destination")
+    args.add_argument("--output", dest="outfile", help="output destination")
     args.add_argument("--json", dest="output_json", action="store_true",
                       default=False, help="pass to specificy JSON output, "
                       "default=TSV")
     return args.parse_args()
 
 
-def write_output_tsv():
-    """Outputs the annotations to a CSV file"""
-    return 0
-
-def write_output_json():
-    """Outputs the annotations to a JSON file"""
-    return 0
-
-
 def get_high_severity(exacinfo):
     """
     Identifies the most damaging alteration, according to SO.
     Also grabs the transcript containing that alteration type.
+
+    Quick note: most of the indexing trickery is probably uncecessary,
+    ExAC does store terms, like VEP, in order of the most severe down, but
+    this is safer.
     """
+    # if this position is not found in ExAC return data missing values
     try:
         exacinfo["vep_annotations"]
     except KeyError:
         return ".", "."
     # clever little one-liner to grab all consequence terms from exacinfo
     varterms = [a["major_consequence"] for a in exacinfo["vep_annotations"]]
-    # create the consequence array for comparison
-    # now lets use some set wizardry to
-
-
+    # find the highest ranked consequence by finding the smallest
+    # index of the terms in the variant array compared to the SO_ARRAY
+    severe_index = [SO_ARRAY.index(x) for x in varterms]
+    # now find the index of the most severe term in the
+    most_severe_idx = severe_index.index(min(severe_index))
+    return varterms[most_severe_idx], exacinfo["transcripts"][most_severe_idx]
 
 
 def exac_annotation(varinfo):
     """Pull in the ExAC data via API"""
     # Send a GET request to the ExAC API
-    resp = requests.get('http://exac.hms.harvard.edu/rest/variant/variant/' +
-        varinfo)
+    resp = requests.get("http://exac.hms.harvard.edu/rest/variant/variant/" + varinfo)
     if resp.status_code != 200:
-        sys.stderr.write("WARN: No response from ExAC for variant {}")
+        sys.stderr.write("WARN: No response from ExAC for variant {}".format(varinfo))
         return None
     else:
         return resp.json()
@@ -107,15 +106,20 @@ def annotate_variant(record):
     varinfo = "{}-{}-{}-{}".format(record.chrom, record.pos, record.ref,
                                     record.alts[0])
     # Gather record from ExAC via API, fill in variable with data if available
-    exacinfo = exact_annotation(varinfo)
+    exacinfo = exac_annotation(varinfo)
     # pull the variant type and respective transcript from exac info
     vartype, transcript = get_high_severity(exacinfo)
+    # in the case of a non-coding variant, or a variant absent from ExAC
+    # use the type specificed in the VCF
+    if vartype == ".":
+        vartype = record.info["TYPE"]
     try:
         exac_af = exacinfo['allele_freq']
     except KeyError:
         exac_af = "."
+    # a position might overlap multiple genes, so let's let that work.
     try:
-        gene = thing
+        gene = ",".join(exacinfo["genes"])
     except KeyError:
         gene = "."
     # create record dict for variant
@@ -127,31 +131,44 @@ def annotate_variant(record):
                "transcript": transcript,
                "depth": record.info["DP"],
                "altreads": record.info["AO"][0],
-               "altfrac": record.info["AO"][0]/record.info["RO"],
+               "altpercent": record.info["AO"][0]/record.info["DP"],
                "exac_af": exac_af,
                "gene": gene
                }
-    return 0
+    return vardict
+
 
 def main():
     # Retrive the arguments
     args = get_args()
     # output is formated:
     # [chrom, pos, vartype, depth, altreads, altfrac, exac_fq, exac_info]
-    print(get_consqeunce_array())
-    """
-    #
-    vcf_in = VariantFile(input_vcf)
+    vcf_in = VariantFile(args.input_vcf)
     # opening the output file handle before looping the VCF
-    with open(outfile, 'w') as of:
+
+    with open(args.outfile, 'w') as of:
+        if args.output_json:
+            of.write("{Variants:[")
+        else:
+            header = ["chrom", "pos", "ref", "alt", "vartype", "transcript",
+                        "depth", "altreads", "altpercent", "exac_af", "gene"]
+            of.write("\t".join(header))
         for record in vcf_in:
             # annotates the desired values for that variant
             annotated_variant = annotate_variant(record)
-            if output_json:
-                write_output_json(annotated_variant, of)
+            print(annotated_variant)
+            if args.output_json:
+                json.dump(annotated_variant, of)
+                of.write(",")
             else:
-                write_output_tsv(annotated_variant, of)
+                ",".join(annotated_variant["gene"])
+                outline = [str(annotated_variant[x]) for x in header]
+                outline = "\t".join(outline)
+                of.write(outline+"\n")
+        if args.output_json:
+            of.write("[]]}")
     return 0
+
 
 if __name__ == '__main__':
     main()
